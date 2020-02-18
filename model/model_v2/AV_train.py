@@ -1,4 +1,6 @@
 import sys
+import os
+os.environ["CUDA_VISIBLE_DEVICES"]="0,1"
 sys.path.append('../lib')
 import model_AV_new as AV
 from model_ops import ModelMGPU,latest_file
@@ -7,28 +9,45 @@ from keras.models import Model, load_model
 from MyGenerator import AVGenerator
 from keras.callbacks import TensorBoard
 from keras import optimizers
-import os
+import keras
 from model_loss import audio_discriminate_loss2 as audio_loss
 import tensorflow as tf
-
+from tensorflow.python.client import device_lib
+import pdb
 # create AV model
 #############################################################
 RESTORE = False
 # If set true, continue training from last checkpoint
 # needed change 1:h5 file name, 2:epochs num, 3:initial_epoch
 
+#tf.device('/device:XLA_GPU:0')
+tf.device('/job:localhost/replica:0/task:0/device:XLA_GPU:0')
+config = tf.compat.v1.ConfigProto(allow_soft_placement=True, log_device_placement=True)
+config.gpu_options.allow_growth = True
+keras.backend.set_session(tf.compat.v1.Session(config=config))
+
+
+local_device_protos = device_lib.list_local_devices()
+pdb.set_trace()
+#config = tf.ConfigProto( device_count = {'GPU': 2}, allow_soft_placement=True)
+#config.gpu_options.allow_growth = True
+#session = tf.InteractiveSession(config=config)
+#keras.backend.set_session( session)
+
+
 # super parameters
 people_num = 2
 epochs = 100
 initial_epoch = 0
-batch_size = 2 # 4 to feed one 16G GPU
+batch_size = 3 # 4 to feed one 16G GPU
 gamma_loss = 0.1
 beta_loss = gamma_loss*2
 
 # physical devices option to accelerate training process
 workers = 1 # num of core
 use_multiprocessing = False
-NUM_GPU = 1
+NUM_GPU = 2
+#NUM_GPU = 0
 
 # PATH
 path = './saved_AV_models' # model path
@@ -42,6 +61,9 @@ if not folder:
     print('create folder to save models')
 filepath = path + "/AVmodel-" + str(people_num) + "p-{epoch:03d}-{val_loss:.5f}.h5"
 checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='min')
+
+
+
 
 
 #############################################################
